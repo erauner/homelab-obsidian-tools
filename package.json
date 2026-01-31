@@ -1,0 +1,31 @@
+{
+  "name": "homelab-obsidian-tools",
+  "version": "0.1.0",
+  "description": "TypeScript tools for programmatic Obsidian vault management via mdbase",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "vault": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "query": "tsx src/cli.ts query",
+    "report": "tsx src/cli.ts report",
+    "validate": "tsx src/cli.ts validate"
+  },
+  "dependencies": {
+    "mdbase": "file:../mdbase-cli"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

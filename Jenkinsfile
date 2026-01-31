@@ -61,8 +61,8 @@ pipeline {
         failure {
             script {
                 homelab.githubStatus('FAILURE', 'Build failed')
-                homelab.postFailurePrComment([repo: 'erauner/homelab-obsidian-tools'])
-                homelab.notifyDiscordFailure()
+                homelab.postFailurePrComment([repo: 'erauner/homelab-obsidian-tools', container: 'node'])
+                homelab.notifyDiscordFailure([container: 'node'])
             }
         }
     }

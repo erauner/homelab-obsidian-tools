@@ -3,7 +3,41 @@
 pipeline {
     agent {
         kubernetes {
-            yaml homelab.podTemplate('node')
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: jnlp
+    image: jenkins/inbound-agent:3355.v388858a_47b_33-3-jdk21
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  - name: node
+    image: node:22-alpine
+    command: ['sleep', '3600']
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+  - name: tools
+    image: alpine/k8s:1.31.3
+    command: ['sleep', '3600']
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+'''
         }
     }
 
@@ -61,8 +95,8 @@ pipeline {
         failure {
             script {
                 homelab.githubStatus('FAILURE', 'Build failed')
-                homelab.postFailurePrComment([repo: 'erauner/homelab-obsidian-tools', container: 'node'])
-                homelab.notifyDiscordFailure([container: 'node'])
+                homelab.postFailurePrComment([repo: 'erauner/homelab-obsidian-tools'])
+                homelab.notifyDiscordFailure()
             }
         }
     }

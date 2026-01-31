@@ -17,7 +17,7 @@
     "validate": "tsx src/cli.ts validate"
   },
   "dependencies": {
-    "mdbase": "file:../mdbase-cli"
+    "@erauner/mdbase": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -1,4 +1,4 @@
-import { Collection } from "mdbase";
+import { Collection } from "@erauner/mdbase";
 import { config } from "./config.js";
 
 export async function openVault(path?: string) {

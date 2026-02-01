@@ -1,19 +1,17 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, mkdirSync, rmSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 describe("CLI integration", () => {
   const testVaultDir = join(tmpdir(), `obsidian-tools-test-${Date.now()}`);
-  const tasksDir = join(testVaultDir, "tasks");
   const typesDir = join(testVaultDir, "_types");
   const inboxDir = join(testVaultDir, "inbox");
 
   beforeAll(() => {
     // Create a minimal test vault
     mkdirSync(testVaultDir, { recursive: true });
-    mkdirSync(tasksDir, { recursive: true });
     mkdirSync(typesDir, { recursive: true });
     mkdirSync(inboxDir, { recursive: true });
 
@@ -25,55 +23,6 @@ settings:
   types_folder: _types
   default_validation: warn
   include_subfolders: true
-`
-    );
-
-    // Create task type
-    writeFileSync(
-      join(typesDir, "task.md"),
-      `---
-name: task
-description: Task type
-path_pattern: tasks/{title}.md
-match:
-  fields_present:
-    - status
-fields:
-  title:
-    type: string
-    required: true
-  status:
-    type: enum
-    values: [open, in_progress, done]
-    default: open
-  priority:
-    type: number
-    min: 1
-    max: 5
-    default: 3
-  tags:
-    type: list
-    item_type: string
----
-`
-    );
-
-    // Create note type
-    writeFileSync(
-      join(typesDir, "note.md"),
-      `---
-name: note
-description: Note type
-path_pattern: "{title}.md"
-match:
-  path_glob: "**/*.md"
-fields:
-  title:
-    type: string
-  tags:
-    type: list
-    item_type: string
----
 `
     );
 
@@ -132,84 +81,25 @@ fields:
     }
   };
 
-  it("add task creates file with correct frontmatter", () => {
-    const output = runCli('add task --title "Test CLI Task" --priority 1 --status open --tags test,cli');
-
-    expect(output).toContain("Created task:");
-    expect(output).toContain("tasks/Test CLI Task.md");
-
-    const taskPath = join(tasksDir, "Test CLI Task.md");
-    expect(existsSync(taskPath)).toBe(true);
-
-    const content = readFileSync(taskPath, "utf-8");
-    expect(content).toContain("title: Test CLI Task");
-    expect(content).toContain("priority: 1");
-    expect(content).toContain("status: open");
-    expect(content).toContain("- test");
-    expect(content).toContain("- cli");
-  });
-
-  it("query shows created task", () => {
-    const output = runCli("query");
-
-    expect(output).toContain("Test CLI Task");
-    expect(output).toContain("[P1]");
-    expect(output).toContain("[open]");
-  });
-
-  it("list shows task file", () => {
-    const output = runCli("list");
-
-    expect(output).toContain("tasks/Test CLI Task.md");
-    expect(output).toContain("task");
-  });
-
-  it("validate passes for valid files", () => {
-    const output = runCli("validate");
-
-    expect(output).toContain("valid");
-  });
-
-  it("report shows correct counts", () => {
-    const output = runCli("report");
-
-    expect(output).toContain("task:");
-    expect(output).toContain("open:");
-  });
-
-  it("add note creates file in vault root", () => {
-    const output = runCli('add note --title "Test Note" --body "# Hello World"');
-
-    expect(output).toContain("Created note:");
-    expect(output).toContain("Test Note.md");
-
-    const notePath = join(testVaultDir, "Test Note.md");
-    expect(existsSync(notePath)).toBe(true);
-
-    const content = readFileSync(notePath, "utf-8");
-    expect(content).toContain("title: Test Note");
-    expect(content).toContain("# Hello World");
-  });
-
   it("help shows usage info", () => {
     const output = runCli("help");
 
     expect(output).toContain("obsidian-tools");
-    expect(output).toContain("add <type>");
-    expect(output).toContain("query");
+    expect(output).toContain("capture");
+    expect(output).toContain("inbox");
     expect(output).toContain("--vault");
   });
 
-  it("add with missing type shows error", () => {
-    const output = runCli("add");
-
-    expect(output).toContain("Usage:");
+  it("--help works", () => {
+    const output = runCli("--help");
+    expect(output).toContain("obsidian-tools");
   });
 
-  it("unknown command shows help", () => {
+  it("unknown command shows help and suggests mdbase", () => {
     const output = runCli("unknown-command");
 
     expect(output).toContain("Unknown command");
+    expect(output).toContain("mdbase");
   });
 
   it("capture creates fleeting note in inbox", () => {
@@ -220,7 +110,6 @@ fields:
     expect(output).toContain(".md");
 
     // Verify a file was created in inbox
-    const { readdirSync } = require("node:fs");
     const inboxFiles = readdirSync(inboxDir).filter((f: string) => f.endsWith(".md"));
     expect(inboxFiles.length).toBeGreaterThan(0);
 
@@ -238,7 +127,6 @@ fields:
     expect(output).toContain("Captured:");
 
     // Find the newest file in inbox
-    const { readdirSync, statSync } = require("node:fs");
     const inboxFiles = readdirSync(inboxDir)
       .filter((f: string) => f.endsWith(".md"))
       .map((f: string) => ({ name: f, mtime: statSync(join(inboxDir, f)).mtime }))
@@ -272,87 +160,57 @@ fields:
     expect(output).toContain("Source: thought");
   });
 
-  // Query command tests
-  it("query with --type filter shows only matching types", () => {
-    // Add another task for testing
-    runCli('add task --title "Query Test Task" --priority 2 --status open');
+  it("inbox shows relative time", () => {
+    const output = runCli("inbox");
 
-    const output = runCli("query -t task");
-    expect(output).toContain("Query Test Task");
-    expect(output).toContain("Test CLI Task");
+    // Should show relative time like "just now" or "1m ago"
+    expect(output).toMatch(/\[(just now|\d+[mhd] ago|\d{1,2}\/\d{1,2}\/\d{4})\]/);
   });
 
-  it("query with --where filter applies expression", () => {
-    const output = runCli('query -t task -w "priority == 1"');
-
-    expect(output).toContain("Test CLI Task");
-    expect(output).not.toContain("Query Test Task"); // priority 2
-  });
-
-  it("query with --json outputs JSON format", () => {
-    const output = runCli("query -t task --json");
-
-    const parsed = JSON.parse(output);
-    expect(parsed).toHaveProperty("results");
-    expect(Array.isArray(parsed.results)).toBe(true);
-    expect(parsed.results.length).toBeGreaterThan(0);
-  });
-
-  it("query with --limit restricts results", () => {
-    const output = runCli("query -t task --limit 1 --json");
-
-    const parsed = JSON.parse(output);
-    expect(parsed.results.length).toBe(1);
-  });
-
-  it("query with --order sorts results", () => {
-    const output = runCli("query -t task -o priority:desc --json");
-
-    const parsed = JSON.parse(output);
-    const priorities = parsed.results.map((r: { priority?: number }) => r.priority ?? 99);
-    // Should be descending
-    for (let i = 1; i < priorities.length; i++) {
-      expect(priorities[i]).toBeLessThanOrEqual(priorities[i - 1]);
-    }
-  });
-
-  // Run command tests
-  it("run executes query from YAML file", () => {
-    const queriesDir = join(testVaultDir, "queries");
-    mkdirSync(queriesDir, { recursive: true });
+  it("inbox on empty vault shows message", async () => {
+    // Create a separate empty vault
+    const emptyVault = join(tmpdir(), `obsidian-tools-empty-${Date.now()}`);
+    const emptyTypes = join(emptyVault, "_types");
+    const emptyInbox = join(emptyVault, "inbox");
+    mkdirSync(emptyVault, { recursive: true });
+    mkdirSync(emptyTypes, { recursive: true });
+    mkdirSync(emptyInbox, { recursive: true });
 
     writeFileSync(
-      join(queriesDir, "open-tasks.yaml"),
-      `types: [task]
-where: 'status == "open"'
-order_by:
-  - field: priority
-    direction: asc
+      join(emptyVault, "mdbase.yaml"),
+      `spec_version: "0.1"
+settings:
+  types_folder: _types
 `
     );
 
-    const output = runCli(`run "${join(queriesDir, "open-tasks.yaml")}"`);
-    expect(output).toContain("Test CLI Task");
-    expect(output).toContain("results");
-  });
+    writeFileSync(
+      join(emptyTypes, "fleeting.md"),
+      `---
+name: fleeting
+path_pattern: inbox/{id}.md
+match:
+  fields_present:
+    - captured
+fields:
+  id:
+    type: string
+  status:
+    type: enum
+    values: [unprocessed, processed]
+  captured:
+    type: datetime
+---
+`
+    );
 
-  it("run with --json outputs JSON", () => {
-    const queriesDir = join(testVaultDir, "queries");
+    const output = execSync(`npx tsx src/cli.ts --vault "${emptyVault}" inbox 2>&1`, {
+      cwd: join(import.meta.dirname, ".."),
+      encoding: "utf-8",
+    });
 
-    const output = runCli(`run "${join(queriesDir, "open-tasks.yaml")}" --json`);
+    expect(output).toContain("No unprocessed notes");
 
-    const parsed = JSON.parse(output);
-    expect(parsed).toHaveProperty("results");
-    expect(Array.isArray(parsed.results)).toBe(true);
-  });
-
-  it("run without file shows usage", () => {
-    const output = runCli("run");
-    expect(output).toContain("Usage:");
-  });
-
-  it("run with nonexistent file shows error", () => {
-    const output = runCli("run nonexistent.yaml");
-    expect(output).toContain("not found");
+    rmSync(emptyVault, { recursive: true, force: true });
   });
 });

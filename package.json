@@ -1,7 +1,7 @@
 {
   "name": "@erauner/obsidian-tools",
-  "version": "0.6.0",
-  "description": "TypeScript tools for programmatic Obsidian vault management via mdbase",
+  "version": "0.7.0",
+  "description": "Quick capture and inbox for Obsidian vaults using mdbase",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -14,15 +14,11 @@
     "build": "tsc",
     "dev": "tsx src/cli.ts",
     "lint": "eslint src/",
-    "test": "vitest run",
-    "query": "tsx src/cli.ts query",
-    "report": "tsx src/cli.ts report",
-    "validate": "tsx src/cli.ts validate"
+    "test": "vitest run"
   },
   "dependencies": {
     "@erauner/mdbase": "^0.1.0",
-    "ulid": "^2.3.0",
-    "yaml": "^2.3.0"
+    "ulid": "^2.3.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

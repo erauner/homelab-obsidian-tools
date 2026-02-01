@@ -1,6 +1,6 @@
 {
   "name": "@erauner/obsidian-tools",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "TypeScript tools for programmatic Obsidian vault management via mdbase",
   "type": "module",
   "main": "dist/index.js",

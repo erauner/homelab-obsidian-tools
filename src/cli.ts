@@ -11,8 +11,22 @@ const simpleCommands: Record<string, () => Promise<void>> = {
   help: showHelp,
 };
 
+// Strip --vault flag from args (already processed in config.ts)
+function stripVaultFlag(args: string[]): string[] {
+  const result: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--vault") {
+      i++; // Skip the value too
+    } else {
+      result.push(args[i]);
+    }
+  }
+  return result;
+}
+
 async function main() {
-  const [command = "help", ...args] = process.argv.slice(2);
+  const cleanArgs = stripVaultFlag(process.argv.slice(2));
+  const [command = "help", ...args] = cleanArgs;
 
   if (command === "add") {
     await addDocument(args);
@@ -55,9 +69,9 @@ Add Command:
     obsidian-tools add task --title "Review PR" --tags work,urgent --priority 1
     obsidian-tools add note --title "Meeting notes" --body "# Summary..."
 
-Environment:
-  VAULT_PATH   Override default vault path
-               Current: ${config.vaultPath}
+Global Options:
+  --vault <path>   Override vault path (or use VAULT_PATH env var)
+                   Current: ${config.vaultPath}
 `);
 }
 

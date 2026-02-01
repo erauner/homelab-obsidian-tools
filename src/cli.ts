@@ -2,7 +2,8 @@
 import { openVault } from "./vault.js";
 import { config } from "./config.js";
 
-const commands: Record<string, () => Promise<void>> = {
+// Commands that don't need args
+const simpleCommands: Record<string, () => Promise<void>> = {
   query: queryTasks,
   report: generateReport,
   validate: validateVault,
@@ -13,8 +14,10 @@ const commands: Record<string, () => Promise<void>> = {
 async function main() {
   const [command = "help", ...args] = process.argv.slice(2);
 
-  if (command in commands) {
-    await commands[command]();
+  if (command === "add") {
+    await addDocument(args);
+  } else if (command in simpleCommands) {
+    await simpleCommands[command]();
   } else {
     console.error(`Unknown command: ${command}`);
     await showHelp();
@@ -24,21 +27,94 @@ async function main() {
 
 async function showHelp() {
   console.log(`
-homelab-obsidian-tools - Vault management CLI
+obsidian-tools - Vault management CLI
 
-Usage: vault <command>
+Usage: obsidian-tools <command> [options]
 
 Commands:
-  query      Query open tasks by priority
-  report     Generate a vault status report
-  validate   Validate all files against type schemas
-  list       List all files with their types
-  help       Show this help
+  add <type>   Create a new document
+  query        Query open tasks by priority
+  report       Generate a vault status report
+  validate     Validate all files against type schemas
+  list         List all files with their types
+  help         Show this help
+
+Add Command:
+  obsidian-tools add <type> [--field value]...
+
+  Options:
+    --title     Document title (required for most types)
+    --body      Markdown body content
+    --tags      Comma-separated tags
+    --priority  Priority level (for tasks)
+    --status    Status (for tasks: open, in_progress, done)
+    --path      Custom file path (optional)
+
+  Examples:
+    obsidian-tools add task --title "Fix bug" --priority 1 --status open
+    obsidian-tools add task --title "Review PR" --tags work,urgent --priority 1
+    obsidian-tools add note --title "Meeting notes" --body "# Summary..."
 
 Environment:
   VAULT_PATH   Override default vault path
                Current: ${config.vaultPath}
 `);
+}
+
+function parseArgs(args: string[]): { type: string; fields: Record<string, unknown> } {
+  const [type, ...rest] = args;
+  const fields: Record<string, unknown> = {};
+
+  for (let i = 0; i < rest.length; i++) {
+    const arg = rest[i];
+    if (arg.startsWith("--")) {
+      const key = arg.slice(2);
+      const value = rest[++i];
+      if (value === undefined) {
+        console.error(`Missing value for --${key}`);
+        process.exit(1);
+      }
+      // Parse special fields
+      if (key === "tags") {
+        fields[key] = value.split(",").map((t) => t.trim());
+      } else if (key === "priority") {
+        fields[key] = parseInt(value, 10);
+      } else {
+        fields[key] = value;
+      }
+    }
+  }
+
+  return { type, fields };
+}
+
+async function addDocument(args: string[]) {
+  if (args.length === 0) {
+    console.error("Usage: obsidian-tools add <type> [--field value]...");
+    console.error("Example: obsidian-tools add task --title 'New task' --priority 1");
+    process.exit(1);
+  }
+
+  const { type, fields } = parseArgs(args);
+  const { body, path, ...frontmatter } = fields as Record<string, unknown> & { body?: string; path?: string };
+
+  const collection = await openVault();
+
+  const result = await collection.create({
+    type,
+    path,
+    frontmatter,
+    body: body as string | undefined,
+  });
+
+  if (result.error) {
+    console.error(`Failed to create ${type}: ${result.error.message}`);
+    await collection.close();
+    process.exit(1);
+  }
+
+  console.log(`Created ${type}: ${result.path}`);
+  await collection.close();
 }
 
 async function queryTasks() {

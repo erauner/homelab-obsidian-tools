@@ -1,11 +1,14 @@
 {
-  "name": "homelab-obsidian-tools",
+  "name": "@erauner/obsidian-tools",
   "version": "0.1.0",
   "description": "TypeScript tools for programmatic Obsidian vault management via mdbase",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "vault": "./dist/cli.js"
+    "obsidian-tools": "./dist/cli.js"
+  },
+  "publishConfig": {
+    "registry": "https://nexus.erauner.dev/repository/npm-hosted/"
   },
   "scripts": {
     "build": "tsc",

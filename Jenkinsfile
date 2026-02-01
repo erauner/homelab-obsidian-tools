@@ -52,9 +52,10 @@ spec:
             steps {
                 container('node') {
                     // Configure npm to use Nexus for @erauner packages
-                    withCredentials([string(credentialsId: 'nexus-npm-token', variable: 'NPM_TOKEN')]) {
+                    withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                         sh '''
-                            echo "//npm.nexus.erauner.dev/repository/npm-hosted/:_authToken=${NPM_TOKEN}" >> .npmrc
+                            AUTH_TOKEN=$(echo -n "${NEXUS_USER}:${NEXUS_PASS}" | base64)
+                            echo "//npm.nexus.erauner.dev/repository/npm-hosted/:_auth=${AUTH_TOKEN}" >> .npmrc
                         '''
                     }
                 }

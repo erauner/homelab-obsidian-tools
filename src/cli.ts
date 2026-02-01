@@ -110,11 +110,11 @@ async function generateReport() {
 
   // Validation summary
   const validation = await collection.validate();
-  const errorCount = validation.errors?.length ?? 0;
+  const errorCount = validation.issues?.length ?? 0;
   const warningCount = validation.warnings?.length ?? 0;
 
   console.log("\nValidation:");
-  console.log(`  Errors: ${errorCount}`);
+  console.log(`  Issues: ${errorCount}`);
   console.log(`  Warnings: ${warningCount}`);
 
   console.log("\n" + "═".repeat(60));
@@ -130,21 +130,21 @@ async function validateVault() {
 
   const result = await collection.validate();
 
-  if (result.errors?.length) {
-    console.log("Errors:");
-    for (const err of result.errors) {
-      console.log(`  ❌ ${err.path}: ${err.message}`);
+  if (result.issues?.length) {
+    console.log("Issues:");
+    for (const issue of result.issues) {
+      console.log(`  ❌ ${issue.path ?? "unknown"}: ${issue.message}`);
     }
   }
 
   if (result.warnings?.length) {
     console.log("\nWarnings:");
     for (const warn of result.warnings) {
-      console.log(`  ⚠️  ${warn.path}: ${warn.message}`);
+      console.log(`  ⚠️  ${warn}`);
     }
   }
 
-  if (!result.errors?.length && !result.warnings?.length) {
+  if (!result.issues?.length && !result.warnings?.length) {
     console.log("✅ All files valid!");
   }
 

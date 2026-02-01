@@ -271,4 +271,88 @@ fields:
     expect(output).toContain("Context: Testing CLI");
     expect(output).toContain("Source: thought");
   });
+
+  // Query command tests
+  it("query with --type filter shows only matching types", () => {
+    // Add another task for testing
+    runCli('add task --title "Query Test Task" --priority 2 --status open');
+
+    const output = runCli("query -t task");
+    expect(output).toContain("Query Test Task");
+    expect(output).toContain("Test CLI Task");
+  });
+
+  it("query with --where filter applies expression", () => {
+    const output = runCli('query -t task -w "priority == 1"');
+
+    expect(output).toContain("Test CLI Task");
+    expect(output).not.toContain("Query Test Task"); // priority 2
+  });
+
+  it("query with --json outputs JSON format", () => {
+    const output = runCli("query -t task --json");
+
+    const parsed = JSON.parse(output);
+    expect(parsed).toHaveProperty("results");
+    expect(Array.isArray(parsed.results)).toBe(true);
+    expect(parsed.results.length).toBeGreaterThan(0);
+  });
+
+  it("query with --limit restricts results", () => {
+    const output = runCli("query -t task --limit 1 --json");
+
+    const parsed = JSON.parse(output);
+    expect(parsed.results.length).toBe(1);
+  });
+
+  it("query with --order sorts results", () => {
+    const output = runCli("query -t task -o priority:desc --json");
+
+    const parsed = JSON.parse(output);
+    const priorities = parsed.results.map((r: { priority?: number }) => r.priority ?? 99);
+    // Should be descending
+    for (let i = 1; i < priorities.length; i++) {
+      expect(priorities[i]).toBeLessThanOrEqual(priorities[i - 1]);
+    }
+  });
+
+  // Run command tests
+  it("run executes query from YAML file", () => {
+    const queriesDir = join(testVaultDir, "queries");
+    mkdirSync(queriesDir, { recursive: true });
+
+    writeFileSync(
+      join(queriesDir, "open-tasks.yaml"),
+      `types: [task]
+where: 'status == "open"'
+order_by:
+  - field: priority
+    direction: asc
+`
+    );
+
+    const output = runCli(`run "${join(queriesDir, "open-tasks.yaml")}"`);
+    expect(output).toContain("Test CLI Task");
+    expect(output).toContain("results");
+  });
+
+  it("run with --json outputs JSON", () => {
+    const queriesDir = join(testVaultDir, "queries");
+
+    const output = runCli(`run "${join(queriesDir, "open-tasks.yaml")}" --json`);
+
+    const parsed = JSON.parse(output);
+    expect(parsed).toHaveProperty("results");
+    expect(Array.isArray(parsed.results)).toBe(true);
+  });
+
+  it("run without file shows usage", () => {
+    const output = runCli("run");
+    expect(output).toContain("Usage:");
+  });
+
+  it("run with nonexistent file shows error", () => {
+    const output = runCli("run nonexistent.yaml");
+    expect(output).toContain("not found");
+  });
 });

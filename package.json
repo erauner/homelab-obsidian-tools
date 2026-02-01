@@ -1,6 +1,6 @@
 {
   "name": "@erauner/obsidian-tools",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "TypeScript tools for programmatic Obsidian vault management via mdbase",
   "type": "module",
   "main": "dist/index.js",
@@ -21,7 +21,8 @@
   },
   "dependencies": {
     "@erauner/mdbase": "^0.1.0",
-    "ulid": "^2.3.0"
+    "ulid": "^2.3.0",
+    "yaml": "^2.3.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

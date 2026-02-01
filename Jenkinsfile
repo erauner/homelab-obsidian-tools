@@ -21,7 +21,7 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                         sh '''
                             AUTH_TOKEN=$(echo -n "${NEXUS_USER}:${NEXUS_PASS}" | base64)
-                            echo "//npm.nexus.erauner.dev/repository/npm-hosted/:_auth=${AUTH_TOKEN}" >> .npmrc
+                            echo "//nexus.erauner.dev/repository/npm-hosted/:_auth=${AUTH_TOKEN}" >> .npmrc
                         '''
                     }
                 }
